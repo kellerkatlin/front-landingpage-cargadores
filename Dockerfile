@@ -18,16 +18,16 @@ ENV VITE_API_URL=${VITE_API_URL}
 
 RUN pnpm run build
 
-# ---------- Runtime stage ----------
-FROM nginx:1.27-alpine
-
-# Config Nginx con fallback a index.html para React Router
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Etapa de Producción: nginx
+FROM nginx:stable-alpine
 
 # Copiar artefactos
 COPY --from=build /app/dist /usr/share/nginx/html
 
+# Config Nginx con fallback a index.html para React Router
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Salud y puerto
 EXPOSE 80
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD wget -qO- http://localhost/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]
