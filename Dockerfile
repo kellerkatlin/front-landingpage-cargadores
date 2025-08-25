@@ -22,7 +22,7 @@ RUN pnpm run build
 FROM nginx:1.27-alpine
 
 # Config Nginx con fallback a index.html para React Router
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copiar artefactos
 COPY --from=build /app/dist /usr/share/nginx/html
