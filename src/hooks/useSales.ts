@@ -27,6 +27,7 @@ export type Sale = {
   } | null;
   quantity: number;
   unitPrice: number;
+  productId: number;
   subtotal: number;
   totalAmount: number;
   saleStatus: SaleStatus;

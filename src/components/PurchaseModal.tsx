@@ -31,7 +31,6 @@ import { usePurchase } from "@/hooks/usePurchase";
 import { trackPixel } from "@/lib/pixel";
 import rawUbigeo from "@/data/ubigeo.json";
 
-const PRICE = 49;
 const PRODUCT_ID = "charger_typec_lightning";
 const BASE_PRICE = 49.9;
 const TIER_PRICE_2PLUS = 39.9;

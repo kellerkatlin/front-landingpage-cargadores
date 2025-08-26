@@ -16,7 +16,6 @@ const fbqPurchase = (
     typeof window !== "undefined" &&
     typeof (window as any).fbq === "function"
   ) {
-    // Enviar con eventID para de-duplicar con CAPI
     (window as any).fbq(
       "track",
       "Purchase",
@@ -46,12 +45,40 @@ export default function CheckoutSuccess() {
     const alreadyFiredKey = `pixel_purchase_fired_${saleId}`;
     if (sessionStorage.getItem(alreadyFiredKey)) return; // evita duplicados por reload
 
-    const amount = Number(data?.totalAmount || 0);
-    const qty = Number(data?.itemsQuantity || data?.quantity || 1); // ajusta según tu payload real
-    const contents = [
-      // Si tienes el ID real del producto, úsalo. Aquí dejo un fallback.
-      { id: data?.productId ?? "charger_typec_lightning", quantity: qty },
-    ];
+    const amount = Number((data as any)?.totalAmount ?? 0);
+
+    // items del payload público
+    const items: any[] = Array.isArray((data as any)?.items)
+      ? (data as any).items
+      : [];
+
+    // cantidad total = suma de quantity por ítem (fallback a 1)
+    const totalQty =
+      items.length > 0
+        ? items.reduce((acc, it) => acc + Number(it?.quantity ?? 1), 0)
+        : Number((data as any)?.quantity ?? 1);
+
+    // Construimos contents con id en string; probamos varios posibles campos
+    const contents =
+      items.length > 0
+        ? items.map((it) => {
+            const rawId =
+              it?.productItemId ??
+              it?.variantId ??
+              it?.productId ??
+              it?.sku ??
+              "unknown";
+            return {
+              id: String(rawId),
+              quantity: Number(it?.quantity ?? 1),
+            };
+          })
+        : [
+            {
+              id: String((data as any)?.productId ?? "charger_typec_lightning"),
+              quantity: totalQty,
+            },
+          ];
 
     // Usa el saleId como eventID para poder hacer match con CAPI
     const eventID = `sale_${saleId}`;
@@ -101,17 +128,17 @@ export default function CheckoutSuccess() {
         <div className="bg-muted/40 rounded p-4 text-left text-sm">
           <div className="flex justify-between">
             <span>ID de venta</span>
-            <span className="font-mono">{data?.id}</span>
+            <span className="font-mono">{(data as any)?.id}</span>
           </div>
           <div className="flex justify-between">
             <span>Monto</span>
             <span className="font-semibold">
-              S/ {data?.totalAmount?.toFixed(2)}
+              S/ {Number((data as any)?.totalAmount ?? 0).toFixed(2)}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Estado de pago</span>
-            <span className="font-medium">{data?.paymentStatus}</span>
+            <span className="font-medium">{(data as any)?.paymentStatus}</span>
           </div>
         </div>
 
