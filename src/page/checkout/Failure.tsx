@@ -25,7 +25,7 @@ export default function CheckoutFailure() {
 
         <div className="flex gap-3 justify-center">
           <a
-            href="https://wa.me/51999999999?text=Hola,%20mi%20pago%20falló%20y%20necesito%20ayuda"
+            href="https://wa.me/51932567344?text=Hola,%20mi%20pago%20falló%20y%20necesito%20ayuda"
             target="_blank"
             rel="noreferrer"
           >

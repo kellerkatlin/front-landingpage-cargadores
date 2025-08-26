@@ -41,7 +41,7 @@ export default function CheckoutPending() {
 
         <div className="flex gap-3 justify-center">
           <a
-            href="https://wa.me/51999999999?text=Hola,%20tengo%20dudas%20sobre%20mi%20pago"
+            href="https://wa.me/51932567344?text=Hola,%20tengo%20dudas%20sobre%20mi%20pago"
             target="_blank"
             rel="noreferrer"
           >
