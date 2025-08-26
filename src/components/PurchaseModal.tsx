@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -28,44 +28,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePurchase } from "@/hooks/usePurchase";
+import { trackPixel } from "@/lib/pixel";
+import rawUbigeo from "@/data/ubigeo.json";
 
-const PRICE = 4;
+const PRICE = 49;
+const PRODUCT_ID = "charger_typec_lightning";
+const BASE_PRICE = 49.9;
+const TIER_PRICE_2PLUS = 39.9;
 
-const regions = {
-  Lima: ["Lima", "Callao"],
-  Arequipa: ["Arequipa", "Camaná", "Caravelí"],
-  Cusco: ["Cusco", "Anta", "Calca"],
-  "La Libertad": ["Trujillo", "Ascope", "Chepén"],
-  Piura: ["Piura", "Sullana", "Talara"],
-  Lambayeque: ["Chiclayo", "Ferreñafe", "Lambayeque"],
-  Ancash: ["Huaraz", "Chimbote", "Casma"],
-  Ica: ["Ica", "Chincha", "Pisco"],
-  Junín: ["Huancayo", "Tarma", "Satipo"],
-  Cajamarca: ["Cajamarca", "Jaén", "Chota"],
-};
-
-const districts: Record<string, string[]> = {
-  Lima: [
-    "Miraflores",
-    "San Isidro",
-    "Barranco",
-    "Surco",
-    "La Molina",
-    "San Borja",
-    "Magdalena",
-    "Jesús María",
-    "Lince",
-    "Pueblo Libre",
-  ],
-  Callao: ["Callao", "Bellavista", "Carmen de la Legua", "La Perla"],
-  Arequipa: ["Arequipa", "Cayma", "Cerro Colorado", "Paucarpata"],
-  Trujillo: ["Trujillo", "La Esperanza", "El Porvenir", "Florencia de Mora"],
-  Chiclayo: ["Chiclayo", "José Leonardo Ortiz", "La Victoria"],
-  Piura: ["Piura", "Castilla", "Catacaos"],
-  Cusco: ["Cusco", "San Jerónimo", "San Sebastián", "Wanchaq"],
-  Huancayo: ["Huancayo", "El Tambo", "Chilca"],
-  // Add more districts as needed
-};
+type DistrictInfo = { ubigeo: string; id: number; inei?: string };
+type UbigeoTree = Record<string, Record<string, Record<string, DistrictInfo>>>;
 
 const formSchema = z.object({
   firstName: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
@@ -75,7 +47,7 @@ const formSchema = z.object({
   province: z.string().min(1, "Selecciona una provincia"),
   district: z.string().min(1, "Selecciona un distrito"),
   reference: z.string().optional(),
-  quantity: z.number().min(1).max(5),
+  quantity: z.number().min(1),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -91,11 +63,18 @@ export const PurchaseModal = ({
   onClose,
   initialQuantity,
 }: PurchaseModalProps) => {
+  const [ubigeo, setUbigeo] = useState<UbigeoTree | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string>("");
   const [selectedProvince, setSelectedProvince] = useState<string>("");
 
+  useEffect(() => {
+    setUbigeo(rawUbigeo as UbigeoTree);
+  }, []);
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
+    mode: "onBlur", // muestra errores al salir del campo
+    reValidateMode: "onChange", // y se revalida al escribir
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -108,15 +87,36 @@ export const PurchaseModal = ({
     },
   });
 
-  const quantity = form.watch("quantity");
-  const total = quantity * PRICE;
+  const availableRegions = useMemo(() => {
+    if (!ubigeo) return [];
+    return Object.keys(ubigeo).sort();
+  }, [ubigeo]);
 
-  const availableProvinces = selectedRegion
-    ? regions[selectedRegion as keyof typeof regions] || []
-    : [];
-  const availableDistricts = selectedProvince
-    ? districts[selectedProvince] || []
-    : [];
+  const availableProvinces = useMemo(() => {
+    if (!ubigeo || !selectedRegion) return [];
+    return Object.keys(ubigeo[selectedRegion] || {}).sort();
+  }, [ubigeo, selectedRegion]);
+
+  const availableDistricts = useMemo(() => {
+    if (!ubigeo || !selectedRegion || !selectedProvince) return [];
+    return Object.keys(ubigeo[selectedRegion]?.[selectedProvince] || {}).sort();
+  }, [ubigeo, selectedRegion, selectedProvince]);
+
+  const qty = form.watch("quantity");
+  const unitPrice = useMemo(
+    () => (qty >= 2 ? TIER_PRICE_2PLUS : BASE_PRICE),
+    [qty]
+  );
+  const subtotal = useMemo(() => BASE_PRICE * qty, [qty]);
+  const total = useMemo(() => unitPrice * qty, [unitPrice, qty]);
+  const savingsPerUnit = useMemo(
+    () => Math.max(0, BASE_PRICE - unitPrice),
+    [unitPrice]
+  );
+  const totalSavings = useMemo(
+    () => savingsPerUnit * qty,
+    [savingsPerUnit, qty]
+  );
 
   useEffect(() => {
     form.setValue("quantity", initialQuantity ?? 1);
@@ -125,6 +125,15 @@ export const PurchaseModal = ({
   const purchase = usePurchase();
 
   const onSubmit = (data: FormData) => {
+    // Pixel: valor real con descuento
+    trackPixel("InitiateCheckout", {
+      value: total,
+      currency: "PEN",
+      contents: [{ id: PRODUCT_ID, quantity: data.quantity }],
+      content_type: "product",
+      num_items: data.quantity,
+    });
+
     purchase.mutate(
       {
         customer: {
@@ -138,13 +147,24 @@ export const PurchaseModal = ({
         },
         sale: {
           quantity: data.quantity,
-          unitPrice: PRICE,
-          totalAmount: total,
+          unitPrice: Number(unitPrice.toFixed(2)), // manda el unitario con descuento si aplica
+          totalAmount: Number(total.toFixed(2)), // total final aplicado
+          // Si tu backend lo acepta, puedes enviar estos campos extra:
+          // discountPerUnit: Number(savingsPerUnit.toFixed(2)),
+          // totalDiscount: Number(totalSavings.toFixed(2)),
+          // productId: PRODUCT_ID,
         },
       },
       {
         onSuccess: ({ pref }) => {
-          // redirige a Mercado Pago
+          trackPixel("AddPaymentInfo", {
+            value: total,
+            currency: "PEN",
+            contents: [
+              { id: PRODUCT_ID, quantity: form.getValues("quantity") },
+            ],
+            content_type: "product",
+          });
           window.location.href = pref.init_point;
         },
         onError: (err: any) => {
@@ -159,28 +179,41 @@ export const PurchaseModal = ({
     const newQuantity = increment
       ? Math.min(currentQuantity + 1, 5)
       : Math.max(currentQuantity - 1, 1);
-    form.setValue("quantity", newQuantity);
-  };
-
-  const handleWhatsApp = () => {
-    const message = encodeURIComponent(
-      `Hola, tengo algunas dudas sobre el cargador Type-C a Lightning. ¿Podrían ayudarme?`
-    );
-    window.open(`https://wa.me/51932567344?text=${message}`, "_blank");
+    form.setValue("quantity", newQuantity, { shouldValidate: true });
   };
 
   const handleRegionChange = (value: string) => {
     setSelectedRegion(value);
     setSelectedProvince("");
-    form.setValue("region", value);
-    form.setValue("province", "");
-    form.setValue("district", "");
+    form.setValue("region", value, {
+      shouldValidate: true,
+      shouldTouch: true,
+      shouldDirty: true,
+    });
+    form.setValue("province", "", {
+      shouldValidate: true,
+      shouldTouch: true,
+      shouldDirty: true,
+    });
+    form.setValue("district", "", {
+      shouldValidate: true,
+      shouldTouch: true,
+      shouldDirty: true,
+    });
   };
 
   const handleProvinceChange = (value: string) => {
     setSelectedProvince(value);
-    form.setValue("province", value);
-    form.setValue("district", "");
+    form.setValue("province", value, {
+      shouldValidate: true,
+      shouldTouch: true,
+      shouldDirty: true,
+    });
+    form.setValue("district", "", {
+      shouldValidate: true,
+      shouldTouch: true,
+      shouldDirty: true,
+    });
   };
 
   return (
@@ -278,12 +311,12 @@ export const PurchaseModal = ({
                       value={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger className="h-12 rounded-ios border-input focus:border-foreground">
+                        <SelectTrigger className="h-9 rounded-ios border-input focus:border-foreground">
                           <SelectValue placeholder="Selecciona tu región" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent className="bg-background border border-border rounded-ios shadow-float">
-                        {Object.keys(regions).map((region) => (
+                        {availableRegions.map((region) => (
                           <SelectItem
                             key={region}
                             value={region}
@@ -317,12 +350,12 @@ export const PurchaseModal = ({
                             <SelectValue placeholder="Selecciona tu provincia" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="bg-background border border-border rounded-ios shadow-float">
+                        <SelectContent className="bg-background border border-border rounded-ios shadow-float text-sm max-h-48 overflow-y-auto">
                           {availableProvinces.map((province) => (
                             <SelectItem
                               key={province}
                               value={province}
-                              className="rounded-ios"
+                              className="text-sm py-1.5"
                             >
                               {province}
                             </SelectItem>
@@ -406,7 +439,7 @@ export const PurchaseModal = ({
                         type="button"
                         onClick={() => handleQuantityChange(false)}
                         className="w-12 h-12 rounded-full border border-input bg-background hover:bg-muted/50 flex items-center justify-center transition-colors"
-                        disabled={quantity <= 1}
+                        disabled={qty <= 1}
                       >
                         <Minus className="w-4 h-4 text-foreground" />
                       </button>
@@ -417,8 +450,14 @@ export const PurchaseModal = ({
                           max="5"
                           className="h-12 text-center rounded-ios border-input focus:border-foreground"
                           {...field}
+                          value={qty}
                           onChange={(e) =>
-                            field.onChange(parseInt(e.target.value) || 1)
+                            field.onChange(
+                              Math.max(
+                                1,
+                                Math.min(5, parseInt(e.target.value) || 1)
+                              )
+                            )
                           }
                         />
                       </div>
@@ -426,7 +465,7 @@ export const PurchaseModal = ({
                         type="button"
                         onClick={() => handleQuantityChange(true)}
                         className="w-12 h-12 rounded-full border border-input bg-background hover:bg-muted/50 flex items-center justify-center transition-colors"
-                        disabled={quantity >= 5}
+                        disabled={qty >= 5}
                       >
                         <Plus className="w-4 h-4 text-foreground" />
                       </button>
@@ -437,14 +476,49 @@ export const PurchaseModal = ({
               )}
             />
 
-            {/* Order Summary */}
+            {/* Resumen con descuento */}
             <div className="bg-muted/30 rounded-ios p-4 space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Precio</span>
+                <span className="text-sm text-muted-foreground">
+                  Precio unitario
+                </span>
                 <span className="text-sm font-medium">
-                  S/ {PRICE.toFixed(2)}
+                  {qty >= 2 ? (
+                    <>
+                      <span className="line-through mr-2">
+                        S/ {BASE_PRICE.toFixed(2)}
+                      </span>
+                      <span className="text-success font-semibold">
+                        S/ {unitPrice.toFixed(2)}
+                      </span>
+                    </>
+                  ) : (
+                    <>S/ {unitPrice.toFixed(2)}</>
+                  )}
                 </span>
               </div>
+
+              {qty >= 2 && (
+                <>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">
+                      Ahorro por unidad
+                    </span>
+                    <span className="text-sm text-success">
+                      - S/ {savingsPerUnit.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">
+                      Subtotal (sin descuento)
+                    </span>
+                    <span className="text-sm line-through">
+                      S/ {subtotal.toFixed(2)}
+                    </span>
+                  </div>
+                </>
+              )}
+
               <div className="flex justify-between items-center border-t border-border pt-2">
                 <span className="text-lg font-semibold text-foreground">
                   Total
@@ -453,16 +527,26 @@ export const PurchaseModal = ({
                   S/ {total.toFixed(2)}
                 </span>
               </div>
+
+              {qty >= 2 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">
+                    Ahorro total
+                  </span>
+                  <span className="text-xs text-success">
+                    - S/ {totalSavings.toFixed(2)}
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* CTA Buttons */}
             <div className="space-y-3 pt-2">
               <Button
                 type="submit"
                 variant="default"
                 size="lg"
                 className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 rounded-full font-medium"
-                disabled={!form.formState.isValid || purchase.isPending}
+                disabled={purchase.isPending} // <-- quita form.formState.isValid
               >
                 {purchase.isPending ? "Procesando…" : "Pagar ahora"}
               </Button>
@@ -472,14 +556,21 @@ export const PurchaseModal = ({
                 variant="outline"
                 size="lg"
                 className="w-full h-12 rounded-full font-medium"
-                onClick={handleWhatsApp}
+                onClick={() => {
+                  const message = encodeURIComponent(
+                    `Hola, tengo algunas dudas sobre el cargador Type-C a Lightning. ¿Podrían ayudarme?`
+                  );
+                  window.open(
+                    `https://wa.me/51932567344?text=${message}`,
+                    "_blank"
+                  );
+                }}
                 disabled={purchase.isPending}
               >
                 Tengo dudas
               </Button>
             </div>
 
-            {/* Security Note */}
             <div className="flex items-center justify-center gap-2 pt-2">
               <Lock className="w-4 h-4 text-muted-foreground" />
               <p className="text-xs text-muted-foreground text-center">
@@ -487,13 +578,6 @@ export const PurchaseModal = ({
                 entrega.
               </p>
             </div>
-
-            {!form.formState.isValid &&
-              Object.keys(form.formState.errors).length > 0 && (
-                <p className="text-xs text-destructive text-center">
-                  Por favor completa los campos marcados con *
-                </p>
-              )}
           </form>
         </Form>
       </DialogContent>

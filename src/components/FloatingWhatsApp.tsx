@@ -11,7 +11,7 @@ export const FloatingWhatsApp = () => {
 
   const handleWhatsApp = () => {
     window.open(
-      "https://wa.me/51999999999?text=Hola,%20quiero%20información%20sobre%20el%20cargador%20Type-C%20a%20Lightning",
+      "https://wa.me/51932567344?text=Hola,%20quiero%20información%20sobre%20el%20cargador%20Type-C%20a%20Lightning",
       "_blank"
     );
   };

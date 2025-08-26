@@ -4,7 +4,7 @@ import { motion, type Variants } from "framer-motion";
 export const Footer = () => {
   const handleWhatsApp = () => {
     window.open(
-      "https://wa.me/51999999999?text=Hola,%20tengo%20una%20consulta%20sobre%20el%20cargador",
+      "https://wa.me/51932567344?text=Hola,%20tengo%20una%20consulta%20sobre%20el%20cargador",
       "_blank"
     );
   };
@@ -78,7 +78,7 @@ export const Footer = () => {
               <MessageCircle className="w-6 h-6 text-footer-foreground" />
               <div className="text-sm">
                 <div className="font-medium text-foreground">WhatsApp</div>
-                <div className="text-footer-foreground">+51 999 999 999</div>
+                <div className="text-footer-foreground">+51 932 567 344</div>
               </div>
             </motion.div>
 
@@ -90,7 +90,7 @@ export const Footer = () => {
               <div className="text-sm">
                 <div className="font-medium text-foreground">Email</div>
                 <div className="text-footer-foreground">
-                  ventas@cargadorpremium.pe
+                  ventas@pyt-store.com
                 </div>
               </div>
             </motion.div>
@@ -116,7 +116,7 @@ export const Footer = () => {
             className="border-t border-border pt-8"
           >
             <p className="text-sm text-footer-foreground">
-              © 2024 Cargador Premium Perú. Todos los derechos reservados.
+              © 2025 Cargador Premium Perú. Todos los derechos reservados.
             </p>
             <p className="text-xs text-footer-foreground mt-2">
               Producto con garantía local • Envíos seguros a todo el país

@@ -3,11 +3,16 @@ import { Button } from "@/components/ui/button";
 import { PurchaseModal } from "@/components/PurchaseModal";
 import heroProduct from "@/assets/hero-product.png";
 import { motion, AnimatePresence } from "framer-motion";
-import { Minus, Plus, Shield, Truck, Zap } from "lucide-react";
+import { BadgePercent, Minus, Plus, Shield, Truck, Zap } from "lucide-react";
+import { track } from "@/lib/pixel";
 
 const BASE_PRICE = 49.9;
-const TIER_PRICE_2PLUS = 30;
+const TIER_PRICE_2PLUS = 39.9;
 const OFFERPRICE = 120;
+
+const PRODUCT_ID = "charger_typec_lightning"; // reemplaza si corresponde
+
+const DISCOUNT_PER_UNIT = BASE_PRICE - TIER_PRICE_2PLUS;
 
 export const HeroSection = () => {
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
@@ -17,6 +22,15 @@ export const HeroSection = () => {
   const inlineCtaRef = useRef<HTMLButtonElement | null>(null);
   const [inlineCtaInView, setInlineCtaInView] = useState(false);
 
+  useEffect(() => {
+    // ViewContent: cuando aterriza en la sección del producto
+    track("ViewContent", {
+      content_ids: [PRODUCT_ID],
+      content_type: "product",
+      value: BASE_PRICE, // valor de referencia
+      currency: "PEN",
+    });
+  }, []);
   useEffect(() => {
     const el = inlineCtaRef.current;
     if (!el) return;
@@ -53,7 +67,18 @@ export const HeroSection = () => {
 
   const dec = () => setQuantity((q) => Math.max(1, q - 1));
   const inc = () => setQuantity((q) => Math.min(5, q + 1));
-  const handleBuyNow = () => setIsPurchaseModalOpen(true);
+  const handleBuyNow = () => {
+    // AddToCart: tu “Comprar ahora” agrega al carrito
+    track("AddToCart", {
+      content_ids: [PRODUCT_ID],
+      contents: [{ id: PRODUCT_ID, quantity }],
+      content_type: "product",
+      value: total, // importe total de lo agregado
+      currency: "PEN",
+      num_items: quantity,
+    });
+    setIsPurchaseModalOpen(true);
+  };
 
   return (
     <section className="min-h-screen flex items-center bg-gradient-hero pt-16 pb-8">
@@ -122,133 +147,197 @@ export const HeroSection = () => {
               </p>
             </motion.div>
 
-            {/* Beneficios */}
-            <motion.ul
-              variants={{
-                hidden: { opacity: 0, y: 12 },
-                visible: { opacity: 1, y: 0, transition: { duration: 1 } },
-              }}
-              className=" -mt-4 md:mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm"
-            >
-              <li className="flex items-center justify-center lg:justify-start gap-2 bg-card rounded-ios px-3 py-2 border border-border shadow-card">
-                <Zap className="w-4 h-4 text-primary" />
-                Carga rápida
-              </li>
-              <li className="flex items-center justify-center lg:justify-start gap-2 bg-card rounded-ios px-3 py-2 border border-border shadow-card">
-                <Truck className="w-4 h-4 text-primary" />
-                Envío 24–72 h
-              </li>
-              <li className="flex items-center justify-center lg:justify-start gap-2 bg-card rounded-ios px-3 py-2 border border-border shadow-card">
-                <Shield className="w-4 h-4 text-primary" />
-                Garantía 6 meses
-              </li>
-            </motion.ul>
+            <div className="flex flex-col-reverse md:flex-col gap-10 md:gap-0 ">
+              {/* Beneficios */}
+              <motion.ul
+                variants={{
+                  hidden: { opacity: 0, y: 12 },
+                  visible: { opacity: 1, y: 0, transition: { duration: 1 } },
+                }}
+                className=" -mt-4 md:mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm"
+              >
+                <li className="flex items-center justify-center lg:justify-start gap-2 bg-card rounded-ios px-3 py-2 border border-border shadow-card">
+                  <Zap className="w-4 h-4 text-primary" />
+                  Carga rápida
+                </li>
+                <li className="flex items-center justify-center lg:justify-start gap-2 bg-card rounded-ios px-3 py-2 border border-border shadow-card">
+                  <Truck className="w-4 h-4 text-primary" />
+                  Envío 24–72 h
+                </li>
+                <li className="flex items-center justify-center lg:justify-start gap-2 bg-card rounded-ios px-3 py-2 border border-border shadow-card">
+                  <Shield className="w-4 h-4 text-primary" />
+                  Garantía 6 meses
+                </li>
+              </motion.ul>
 
-            {/* Card de compra */}
-            <motion.div
-              variants={{
-                hidden: { opacity: 0, y: 16 },
-                visible: { opacity: 1, y: 0, transition: { duration: 1 } },
-              }}
-              className=" mt-4 md:mt-8 bg-card rounded-ios shadow-float border border-border p-6"
-            >
-              {/* Precios */}
-              <div className="mb-4">
-                <div className="flex items-center justify-center lg:justify-start gap-3">
-                  {quantity < 2 ? (
-                    <>
-                      <span className="text-2xl text-price-original line-through">
-                        S/ {OFFERPRICE.toFixed(2)}
-                      </span>
-                      <span className="text-4xl font-bold text-price-highlight">
-                        S/ {BASE_PRICE.toFixed(2)}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-sm px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                        Pack 2+: S/ {TIER_PRICE_2PLUS.toFixed(2)} c/u
-                      </span>
-                      <span className="text-4xl font-bold text-price-highlight">
-                        S/ {unitPrice.toFixed(2)}
-                      </span>
-                      <span className="text-sm text-success">
-                        –S/ {savingsPerUnit.toFixed(2)} c/u
-                      </span>
-                    </>
-                  )}
-                </div>
-                <p className="text-center lg:text-left text-muted-foreground mt-2">
-                  Cable Type-C a Lightning + Cubo de carga rápida
-                </p>
-              </div>
-
-              {/* Selector de cantidad */}
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={dec}
-                    className="w-11 h-11 rounded-full border border-input bg-background hover:bg-muted/50 flex items-center justify-center transition-colors disabled:opacity-50"
-                    disabled={quantity <= 1}
-                    aria-label="Disminuir cantidad"
-                  >
-                    <Minus className="w-4 h-4 text-foreground" />
-                  </button>
-
-                  <input
-                    type="number"
-                    min={1}
-                    max={5}
-                    value={quantity}
-                    onChange={(e) => {
-                      const v = Number(e.target.value || 1);
-                      setQuantity(Math.max(1, Math.min(5, v)));
-                    }}
-                    className="w-20 h-11 text-center rounded-ios border border-input focus:outline-none focus:ring-2 focus:ring-ring"
-                    aria-label="Cantidad"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={inc}
-                    className="w-11 h-11 rounded-full border border-input bg-background hover:bg-muted/50 flex items-center justify-center transition-colors disabled:opacity-50"
-                    disabled={quantity >= 5}
-                    aria-label="Aumentar cantidad"
-                  >
-                    <Plus className="w-4 h-4 text-foreground" />
-                  </button>
-                </div>
-
-                <div className="flex-1 text-center sm:text-right">
-                  <div className="text-sm text-muted-foreground">Total</div>
-                  <div className="text-2xl font-semibold text-foreground">
-                    S/ {total.toFixed(2)}
+              {/* Card de compra */}
+              <motion.div
+                variants={{
+                  hidden: { opacity: 0, y: 16 },
+                  visible: { opacity: 1, y: 0, transition: { duration: 1 } },
+                }}
+                className=" mt-4 md:mt-8 bg-card rounded-ios shadow-float border border-border p-6"
+              >
+                {/* Precios */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-center lg:justify-start gap-3">
+                    {quantity < 2 ? (
+                      <>
+                        <span className="text-2xl text-price-original line-through">
+                          S/ {OFFERPRICE.toFixed(2)}
+                        </span>
+                        <span className="text-4xl font-bold text-price-highlight">
+                          S/ {BASE_PRICE.toFixed(2)}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                          Pack 2+: S/ {TIER_PRICE_2PLUS.toFixed(2)} c/u
+                        </span>
+                        <span className="text-4xl font-bold text-price-highlight">
+                          S/ {unitPrice.toFixed(2)}
+                        </span>
+                        <span className="text-sm text-success">
+                          –S/ {savingsPerUnit.toFixed(2)} c/u
+                        </span>
+                      </>
+                    )}
                   </div>
-                  {totalSavings > 0 && (
-                    <div className="text-xs text-success">
-                      Ahorro: S/ {totalSavings.toFixed(2)}
-                    </div>
-                  )}
-                </div>
-              </div>
+                  <p className="text-center lg:text-left text-muted-foreground mt-2">
+                    Cable Type-C a Lightning + Cubo de carga rápida
+                  </p>
 
-              {/* CTA inline (observada por IntersectionObserver) */}
-              <div className="mt-6">
-                <Button
-                  ref={inlineCtaRef}
-                  variant="hero"
-                  size="xl"
-                  onClick={handleBuyNow}
-                  className="w-full md:w-auto px-10 rounded-full"
-                >
-                  Comprar ahora
-                </Button>
-                <p className="text-xs text-muted-foreground mt-3 text-center lg:text-left">
-                  Pago seguro • Envío en 24–72 horas
-                </p>
-              </div>
-            </motion.div>
+                  <AnimatePresence mode="wait">
+                    {quantity < 2 ? (
+                      // Hint cuando está en 1 unidad
+                      <motion.div
+                        key="pack-hint"
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        onClick={() => setQuantity(2)}
+                        transition={{ duration: 0.35 }}
+                        className="mt-3 flex items-center cursor-pointer justify-center lg:justify-start"
+                        aria-live="polite"
+                      >
+                        <motion.div
+                          animate={{ scale: [1, 1.03, 1] }}
+                          transition={{
+                            duration: 1.2,
+                            repeat: 2,
+                            ease: "easeInOut",
+                          }}
+                          className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 shadow-sm"
+                        >
+                          <BadgePercent className="w-4 h-4 text-primary" />
+                          <span className="text-xs text-foreground/90">
+                            Llévate{" "}
+                            <button
+                              type="button"
+                              className="underline underline-offset-2 decoration-dotted hover:text-primary focus:outline-none"
+                              aria-label="Seleccionar dos unidades"
+                            >
+                              2
+                            </button>{" "}
+                            y paga S/ {TIER_PRICE_2PLUS.toFixed(2)} c/u
+                            <span className="text-success">
+                              {" "}
+                              (–S/ {DISCOUNT_PER_UNIT.toFixed(2)} c/u)
+                            </span>
+                          </span>
+                        </motion.div>
+                      </motion.div>
+                    ) : (
+                      // Mensaje cuando ya activó pack 2+
+                      <motion.div
+                        key="pack-active"
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.35 }}
+                        className="mt-3 flex items-center justify-center lg:justify-start"
+                        aria-live="polite"
+                      >
+                        <span className="inline-flex items-center gap-2 rounded-full bg-success/10 text-success px-3 py-1">
+                          <BadgePercent className="w-4 h-4" />
+                          <span className="text-xs">
+                            Pack 2+ activo • Ahorro total: S/{" "}
+                            {totalSavings.toFixed(2)}
+                          </span>
+                        </span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Selector de cantidad */}
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={dec}
+                      className="w-11 h-11 rounded-full border border-input bg-background hover:bg-muted/50 flex items-center justify-center transition-colors disabled:opacity-50"
+                      disabled={quantity <= 1}
+                      aria-label="Disminuir cantidad"
+                    >
+                      <Minus className="w-4 h-4 text-foreground" />
+                    </button>
+
+                    <input
+                      type="number"
+                      min={1}
+                      max={5}
+                      value={quantity}
+                      onChange={(e) => {
+                        const v = Number(e.target.value || 1);
+                        setQuantity(Math.max(1, Math.min(5, v)));
+                      }}
+                      className="w-20 h-11 text-center rounded-ios border border-input focus:outline-none focus:ring-2 focus:ring-ring"
+                      aria-label="Cantidad"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={inc}
+                      className="w-11 h-11 rounded-full border border-input bg-background hover:bg-muted/50 flex items-center justify-center transition-colors disabled:opacity-50"
+                      disabled={quantity >= 5}
+                      aria-label="Aumentar cantidad"
+                    >
+                      <Plus className="w-4 h-4 text-foreground" />
+                    </button>
+                  </div>
+
+                  <div className="flex-1 text-center sm:text-right">
+                    <div className="text-sm text-muted-foreground">Total</div>
+                    <div className="text-2xl font-semibold text-foreground">
+                      S/ {total.toFixed(2)}
+                    </div>
+                    {totalSavings > 0 && (
+                      <div className="text-xs text-success">
+                        Ahorro: S/ {totalSavings.toFixed(2)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* CTA inline (observada por IntersectionObserver) */}
+                <div className="mt-6">
+                  <Button
+                    ref={inlineCtaRef}
+                    variant="hero"
+                    size="xl"
+                    onClick={handleBuyNow}
+                    className="w-full md:w-auto px-10 rounded-full"
+                  >
+                    Comprar ahora
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-3 text-center lg:text-left">
+                    Pago seguro • Envío en 24–72 horas
+                  </p>
+                </div>
+              </motion.div>
+            </div>
           </motion.div>
         </div>
       </div>

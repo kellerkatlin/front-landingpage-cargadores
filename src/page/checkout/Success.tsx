@@ -1,13 +1,67 @@
 // src/page/checkout/Success.tsx
+import { useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { usePublicSale } from "@/hooks/useSales";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, MessageCircle } from "lucide-react";
 
+// (opcional) helpers mínimos:
+const fbqPurchase = (
+  value: number,
+  currency: string,
+  contents: { id: string; quantity: number }[],
+  eventID?: string
+) => {
+  if (
+    typeof window !== "undefined" &&
+    typeof (window as any).fbq === "function"
+  ) {
+    // Enviar con eventID para de-duplicar con CAPI
+    (window as any).fbq(
+      "track",
+      "Purchase",
+      {
+        value,
+        currency,
+        contents,
+        content_type: "product",
+      },
+      eventID ? { eventID } : undefined
+    );
+  }
+};
+
 export default function CheckoutSuccess() {
   const [params] = useSearchParams();
   const saleId = params.get("sale") || undefined;
   const { data, isLoading, error } = usePublicSale(saleId);
+
+  // -----> DISPARO DE PIXEL (solo cuando está PAID y solo 1 vez por saleId)
+  useEffect(() => {
+    if (!saleId || !data) return;
+
+    const paid = data?.paymentStatus === "PAID";
+    if (!paid) return;
+
+    const alreadyFiredKey = `pixel_purchase_fired_${saleId}`;
+    if (sessionStorage.getItem(alreadyFiredKey)) return; // evita duplicados por reload
+
+    const amount = Number(data?.totalAmount || 0);
+    const qty = Number(data?.itemsQuantity || data?.quantity || 1); // ajusta según tu payload real
+    const contents = [
+      // Si tienes el ID real del producto, úsalo. Aquí dejo un fallback.
+      { id: data?.productId ?? "charger_typec_lightning", quantity: qty },
+    ];
+
+    // Usa el saleId como eventID para poder hacer match con CAPI
+    const eventID = `sale_${saleId}`;
+
+    fbqPurchase(amount, "PEN", contents, eventID);
+
+    sessionStorage.setItem(alreadyFiredKey, "1");
+  }, [saleId, data]);
+
+  // -----------------------------------------
 
   if (!saleId) {
     return (
