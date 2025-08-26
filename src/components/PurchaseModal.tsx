@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/select";
 import { usePurchase } from "@/hooks/usePurchase";
 
-const PRICE = 1;
+const PRICE = 4;
 
 const regions = {
   Lima: ["Lima", "Callao"],
