@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { usePurchase } from "@/hooks/usePurchase";
 
 const PRICE = 59.9;
 
@@ -103,7 +104,7 @@ export const PurchaseModal = ({
       province: "",
       district: "",
       reference: "",
-      quantity: initialQuantity,
+      quantity: initialQuantity ?? 1,
     },
   });
 
@@ -121,19 +122,36 @@ export const PurchaseModal = ({
     form.setValue("quantity", initialQuantity ?? 1);
   }, [initialQuantity, form]);
 
+  const purchase = usePurchase();
+
   const onSubmit = (data: FormData) => {
-    const orderData = {
-      ...data,
-      price: PRICE,
-      total: total,
-      timestamp: new Date().toISOString(),
-    };
-
-    console.log("Order data:", orderData);
-
-    // Here you would integrate with Mercado Pago
-    const mercadoPagoUrl = `https://www.mercadopago.com.pe/checkout/v1/redirect?pref_id=PREFERENCE_ID`;
-    window.open(mercadoPagoUrl, "_blank");
+    purchase.mutate(
+      {
+        customer: {
+          name: data.firstName,
+          lasName: data.lastName,
+          direccion: data.address,
+          distrito: data.district,
+          provincia: data.province,
+          departamento: data.region,
+          referencia: data.reference,
+        },
+        sale: {
+          quantity: data.quantity,
+          unitPrice: PRICE,
+          totalAmount: total,
+        },
+      },
+      {
+        onSuccess: ({ pref }) => {
+          // redirige a Mercado Pago
+          window.location.href = pref.init_point;
+        },
+        onError: (err: any) => {
+          alert(err.message || "Error al procesar la compra");
+        },
+      }
+    );
   };
 
   const handleQuantityChange = (increment: boolean) => {
@@ -444,9 +462,9 @@ export const PurchaseModal = ({
                 variant="default"
                 size="lg"
                 className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 rounded-full font-medium"
-                disabled={!form.formState.isValid}
+                disabled={!form.formState.isValid || purchase.isPending}
               >
-                Pagar ahora
+                {purchase.isPending ? "Procesando…" : "Pagar ahora"}
               </Button>
 
               <Button
@@ -455,6 +473,7 @@ export const PurchaseModal = ({
                 size="lg"
                 className="w-full h-12 rounded-full font-medium"
                 onClick={handleWhatsApp}
+                disabled={purchase.isPending}
               >
                 Tengo dudas
               </Button>
