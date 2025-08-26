@@ -1,5 +1,5 @@
 import heroProduct from "@/assets/hero-product.png";
-import lifestyleProduct from "@/assets/lifestyle-product.jpg";
+import lifestyleProduct from "@/assets/lifestyle-product.png";
 import { motion, type Variants } from "framer-motion";
 
 const headingVariants: Variants = {

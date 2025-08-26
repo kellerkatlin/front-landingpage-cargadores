@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/select";
 import { usePurchase } from "@/hooks/usePurchase";
 
-const PRICE = 59.9;
+const PRICE = 1;
 
 const regions = {
   Lima: ["Lima", "Callao"],
@@ -166,7 +166,7 @@ export const PurchaseModal = ({
     const message = encodeURIComponent(
       `Hola, tengo algunas dudas sobre el cargador Type-C a Lightning. ¿Podrían ayudarme?`
     );
-    window.open(`https://wa.me/51999999999?text=${message}`, "_blank");
+    window.open(`https://wa.me/51932567344?text=${message}`, "_blank");
   };
 
   const handleRegionChange = (value: string) => {

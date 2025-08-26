@@ -63,7 +63,7 @@ export default function CheckoutSuccess() {
 
         <div className="flex gap-3 justify-center">
           <a
-            href="https://wa.me/51999999999?text=Hola,%20tengo%20dudas%20sobre%20mi%20compra"
+            href="https://wa.me/51932567344?text=Hola,%20tengo%20dudas%20sobre%20mi%20compra"
             target="_blank"
             rel="noreferrer"
           >
