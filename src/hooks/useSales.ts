@@ -37,7 +37,7 @@ export type Sale = {
   updatedAt: string; // ISO
 };
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_URL = import.meta.env.VITE_API_URL || "https://back.pyt-store.com";
 
 /**
  * Trae TODAS las ventas; filtra opcionalmente por estados desde el back
