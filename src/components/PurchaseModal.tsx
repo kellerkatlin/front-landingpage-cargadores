@@ -32,8 +32,8 @@ import { trackPixel } from "@/lib/pixel";
 import rawUbigeo from "@/data/ubigeo.json";
 
 const PRODUCT_ID = "charger_typec_lightning";
-const BASE_PRICE = 49.9;
-const TIER_PRICE_2PLUS = 39.9;
+const BASE_PRICE = 49;
+const TIER_PRICE_2PLUS = 39;
 
 type DistrictInfo = { ubigeo: string; id: number; inei?: string };
 type UbigeoTree = Record<string, Record<string, Record<string, DistrictInfo>>>;
@@ -44,6 +44,7 @@ const formSchema = z.object({
   address: z.string().min(10, "Ingresa una dirección completa"),
   region: z.string().min(1, "Selecciona una región"),
   province: z.string().min(1, "Selecciona una provincia"),
+  district: z.string(),
   reference: z.string().optional(),
   quantity: z.number().min(1),
 });
