@@ -44,7 +44,6 @@ const formSchema = z.object({
   address: z.string().min(10, "Ingresa una dirección completa"),
   region: z.string().min(1, "Selecciona una región"),
   province: z.string().min(1, "Selecciona una provincia"),
-  district: z.string().min(1, "Selecciona un distrito"),
   reference: z.string().optional(),
   quantity: z.number().min(1),
 });
