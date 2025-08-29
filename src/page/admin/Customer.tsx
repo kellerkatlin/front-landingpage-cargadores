@@ -124,6 +124,7 @@ export default function CustomersPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Teléfono</TableHead>
                   <TableHead>DNI</TableHead>
+                  <TableHead>Dirección</TableHead>
                   <TableHead>Ubicación</TableHead>
                   <TableHead className="text-right">Creado</TableHead>
                 </TableRow>
@@ -146,6 +147,7 @@ export default function CustomersPage() {
                         <TableCell>{c.email || "—"}</TableCell>
                         <TableCell>{c.phone || "—"}</TableCell>
                         <TableCell>{c.dni || "—"}</TableCell>
+                        <TableCell>{c.direccion || "-"} </TableCell>
                         <TableCell
                           className="max-w-[240px] truncate"
                           title={location}
