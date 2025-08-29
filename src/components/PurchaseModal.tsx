@@ -41,7 +41,11 @@ type UbigeoTree = Record<string, Record<string, Record<string, DistrictInfo>>>;
 const formSchema = z.object({
   firstName: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
   lastName: z.string().min(2, "El apellido debe tener al menos 2 caracteres"),
-  address: z.string().min(10, "Ingresa una dirección completa"),
+  phone: z
+    .string()
+    .min(9, "El número debe tener al menos 9 dígitos")
+    .regex(/^[0-9]+$/, "Solo se permiten números"),
+  address: z.string().min(5, "Ingresa una dirección completa"),
   region: z.string().min(1, "Selecciona una región"),
   province: z.string().min(1, "Selecciona una provincia"),
   district: z.string(),
@@ -77,6 +81,7 @@ export const PurchaseModal = ({
     defaultValues: {
       firstName: "",
       lastName: "",
+      phone: "",
       address: "",
       region: "",
       province: "",
@@ -138,6 +143,7 @@ export const PurchaseModal = ({
         customer: {
           name: data.firstName,
           lasName: data.lastName,
+          phone: data.phone,
           direccion: data.address,
           distrito: data.district,
           provincia: data.province,
@@ -276,6 +282,26 @@ export const PurchaseModal = ({
               />
             </div>
 
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-foreground">
+                    Celular / WhatsApp *
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="tel"
+                      placeholder="987654321"
+                      className="h-12 rounded-ios border-input focus:border-foreground"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="address"
