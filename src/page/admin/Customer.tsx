@@ -121,10 +121,10 @@ export default function CustomersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
-                  <TableHead>Email</TableHead>
                   <TableHead>Teléfono</TableHead>
                   <TableHead>DNI</TableHead>
                   <TableHead>Dirección</TableHead>
+                  <TableHead>Referencia</TableHead>
                   <TableHead>Ubicación</TableHead>
                   <TableHead className="text-right">Creado</TableHead>
                 </TableRow>
@@ -144,10 +144,10 @@ export default function CustomersPage() {
                         <TableCell className="font-medium">
                           {fullName || "—"}
                         </TableCell>
-                        <TableCell>{c.email || "—"}</TableCell>
                         <TableCell>{c.phone || "—"}</TableCell>
                         <TableCell>{c.dni || "—"}</TableCell>
                         <TableCell>{c.direccion || "-"} </TableCell>
+                        <TableCell>{c.referencia || "—"}</TableCell>
                         <TableCell
                           className="max-w-[240px] truncate"
                           title={location}
