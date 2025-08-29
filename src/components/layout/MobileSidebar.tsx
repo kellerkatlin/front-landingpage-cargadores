@@ -10,9 +10,9 @@ import { NavLink } from "react-router-dom";
 import { Users, Receipt, ListChecks, Menu } from "lucide-react";
 
 const NAV = [
-  { to: "/customers", label: "Customers", icon: Users },
-  { to: "/sales", label: "Sales", icon: Receipt },
-  { to: "/estados", label: "Estados", icon: ListChecks },
+  { to: "/admin/customers", label: "Customers", icon: Users },
+  { to: "/admin/sales", label: "Sales", icon: Receipt },
+  { to: "/admin/estados", label: "Estados", icon: ListChecks },
 ];
 
 export function MobileSidebar() {
