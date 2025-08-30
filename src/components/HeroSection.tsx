@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BadgePercent, Minus, Plus, Shield, Truck, Zap } from "lucide-react";
 import { track } from "@/lib/pixel";
 
-const BASE_PRICE = 49.9;
-const TIER_PRICE_2PLUS = 39.9;
+const BASE_PRICE = 49;
+const TIER_PRICE_2PLUS = 39;
 const OFFERPRICE = 120;
 
 const PRODUCT_ID = "charger_typec_lightning"; // reemplaza si corresponde
