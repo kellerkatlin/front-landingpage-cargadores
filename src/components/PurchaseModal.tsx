@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePurchase } from "@/hooks/usePurchase";
-import { trackPixel } from "@/lib/pixel";
+import { trackPixel, track } from "@/lib/pixel";
 import rawUbigeo from "@/data/ubigeo.json";
 
 const PRODUCT_ID = "charger_typec_lightning";
@@ -207,6 +207,27 @@ export const PurchaseModal = ({
               } catch (err) {
                 console.error("Failed sending n8n webhook", err);
               } finally {
+                // Disparar pixel de Purchase (COD) con eventID para CAPI
+                try {
+                  track(
+                    "Purchase",
+                    {
+                      value: Number(total.toFixed(2)),
+                      currency: "PEN",
+                      contents: [
+                        {
+                          id: PRODUCT_ID,
+                          quantity: form.getValues("quantity"),
+                        },
+                      ],
+                      content_type: "product",
+                    },
+                    { eventID: `sale_${sale.id}` }
+                  );
+                } catch (err) {
+                  console.warn("Failed to fire Purchase pixel", err);
+                }
+
                 // Guardamos la venta y cliente para mostrar pantalla de éxito dentro del modal
                 setSuccessData({ sale, customer });
               }
@@ -682,7 +703,7 @@ export const PurchaseModal = ({
                     variant="default"
                     size="lg"
                     className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 rounded-full font-medium"
-                    disabled={purchase.isPending} // <-- quita form.formState.isValid
+                    disabled={purchase.isPending}
                   >
                     {purchase.isPending ? "Procesando…" : "Pagar ahora"}
                   </Button>
