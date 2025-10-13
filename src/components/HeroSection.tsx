@@ -1,10 +1,27 @@
 import { useMemo, useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
 import { PurchaseModal } from "@/components/PurchaseModal";
 import heroProduct from "@/assets/hero-product.png";
 import { motion, AnimatePresence } from "framer-motion";
-import { BadgePercent, Minus, Plus, Shield, Truck, Zap } from "lucide-react";
+import {
+  BadgePercent,
+  Minus,
+  Plus,
+  Shield,
+  Truck,
+  Zap,
+  CreditCard,
+  Home,
+} from "lucide-react";
 import { track } from "@/lib/pixel";
+
+// Replaced TabsBlock with a shadcn Accordion rendered below the pay buttons.
 
 const BASE_PRICE = 49;
 const TIER_PRICE_2PLUS = 39;
@@ -67,22 +84,29 @@ export const HeroSection = () => {
 
   const dec = () => setQuantity((q) => Math.max(1, q - 1));
   const inc = () => setQuantity((q) => Math.min(5, q + 1));
-  const handleBuyNow = () => {
-    // AddToCart: tu “Comprar ahora” agrega al carrito
+  // NOTE: mobile floating CTA now opens COD flow via openPurchaseModal('cod')
+
+  // nuevo: abrir modal con método de pago
+  const [paymentMethod, setPaymentMethod] = useState<"online" | "cod">(
+    "online"
+  );
+  const openPurchaseModal = (method: "online" | "cod") => {
+    // track AddToCart igual que antes
     track("AddToCart", {
       content_ids: [PRODUCT_ID],
       contents: [{ id: PRODUCT_ID, quantity }],
       content_type: "product",
-      value: total, // importe total de lo agregado
+      value: total,
       currency: "PEN",
       num_items: quantity,
     });
+    setPaymentMethod(method);
     setIsPurchaseModalOpen(true);
   };
 
   return (
     <section className="min-h-screen flex items-center bg-gradient-hero pt-16 pb-8">
-      <div className="container mx-auto px-0 md:px-4">
+      <div className="container mx-auto px-0 md:px-4 md:-mt-7">
         {/* Título SOLO mobile */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -90,7 +114,7 @@ export const HeroSection = () => {
           transition={{ duration: 1 }}
           className="lg:hidden text-center mb-6"
         >
-          <h1 className="text-4xl font-bold tracking-tight text-foreground leading-tight">
+          <h1 className="text-4xl -mt-4 font-bold tracking-tight text-foreground leading-tight">
             Cargador Type-C a Lightning
             <span className="block text-primary">potente y seguro</span>
           </h1>
@@ -139,7 +163,7 @@ export const HeroSection = () => {
               className="hidden lg:block space-y-4 text-left"
             >
               <h1 className="text-5xl font-bold tracking-tight text-foreground leading-tight">
-                Cargador Type-C a Lightning
+                Cargador Type-C a Lightning{" "}
                 <span className="block text-primary">potente y seguro</span>
               </h1>
               <p className="text-lg text-muted-foreground">
@@ -162,7 +186,7 @@ export const HeroSection = () => {
                 </li>
                 <li className="flex items-center justify-center lg:justify-start gap-2 bg-card rounded-ios px-3 py-2 border border-border shadow-card">
                   <Truck className="w-4 h-4 text-primary" />
-                  Envío 24–72 h
+                  Envío Gratis
                 </li>
                 <li className="flex items-center justify-center lg:justify-start gap-2 bg-card rounded-ios px-3 py-2 border border-border shadow-card">
                   <Shield className="w-4 h-4 text-primary" />
@@ -323,20 +347,70 @@ export const HeroSection = () => {
 
                 {/* CTA inline (observada por IntersectionObserver) */}
                 <div className="mt-6">
-                  <Button
-                    ref={inlineCtaRef}
-                    variant="hero"
-                    size="xl"
-                    onClick={handleBuyNow}
-                    className="w-full md:w-auto px-10 rounded-full"
-                  >
-                    Comprar ahora
-                  </Button>
+                  <div className="mt-6 flex flex-col sm:flex-row items-center gap-3">
+                    <Button
+                      ref={inlineCtaRef}
+                      size="xl"
+                      onClick={() => openPurchaseModal("online")}
+                      className="w-full hover:bg-white border-primary border border-solid hover:text-primary sm:w-auto px-6 py-3 rounded-full inline-flex items-center gap-2 justify-center"
+                    >
+                      <CreditCard className="w-4 h-4" />
+                      Pagar online con tarjeta
+                    </Button>
+
+                    <div>
+                      <Button
+                        size="xl"
+                        onClick={() => openPurchaseModal("cod")}
+                        className="w-full sm:w-auto px-6 py-3  rounded-full inline-flex items-center gap-2 justify-center"
+                      >
+                        <Home className="w-4 h-4" />
+                        Pedir y pagar en casa
+                      </Button>
+                    </div>
+                  </div>
                   <p className="text-xs text-muted-foreground mt-3 text-center lg:text-left">
-                    Pago seguro • Envío en 24–72 horas
+                    Pago seguro • Envío en 12–72 horas
                   </p>
                 </div>
               </motion.div>
+              {/* Acordeón informativo (Envío / Resto de Provincias) */}
+              <div className="mt-4">
+                <Accordion type="single" collapsible defaultValue="">
+                  <AccordionItem value="envio">
+                    <AccordionTrigger className="hover:no-underline">
+                      Envío GRATIS y pagas AL RECIBIR en Lima y Callao
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="text-sm text-left -mt-2">
+                        <p className="text-muted-foreground mt-2">
+                          Realizamos envíos gratis a todo Perú. Nuestra oficina
+                          se encuentra en Lima.
+                        </p>
+                        <div className="mt-3">
+                          <h4 className="text-sm font-medium">
+                            Lima Metropolitana y Callao:
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            Pagas al recibir el producto en tu domicilio. Tiempo
+                            de Entrega: 24hs hábiles (NextDay)
+                          </p>
+                        </div>
+                        <div className="mt-3">
+                          <h4 className="text-sm font-medium">
+                            Resto de Provincias:
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            Contra Entrega: Previo adelanto del S/.15 y al
+                            llegar a la Agencia en destino se completa el resto
+                            del pago. Tiempo de Entrega: Entre 48-72hs hábiles.
+                          </p>
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </div>
             </div>
           </motion.div>
         </div>
@@ -347,6 +421,7 @@ export const HeroSection = () => {
         isOpen={isPurchaseModalOpen}
         onClose={() => setIsPurchaseModalOpen(false)}
         initialQuantity={quantity}
+        paymentMethod={paymentMethod}
       />
 
       {/* CTA flotante (se muestra cuando el CTA inline NO está visible) */}
@@ -373,12 +448,13 @@ export const HeroSection = () => {
                     }}
                   >
                     <Button
-                      onClick={handleBuyNow}
-                      className="px-14 block md:hidden text-base text-center rounded-full"
+                      onClick={() => openPurchaseModal("cod")}
+                      className="px-14 md:hidden text-base text-center rounded-full inline-flex items-center justify-center gap-2"
                       size="lg"
                       variant="hero"
                     >
-                      Comprar ahora
+                      <Home className="w-4 h-4" />
+                      Pide ahora • paga en casa
                     </Button>
                   </motion.div>
                 </div>

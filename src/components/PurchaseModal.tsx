@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { X, Lock, Plus, Minus } from "lucide-react";
+import { X, Lock, Plus, Minus, CheckCircle, MessageCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -59,13 +59,19 @@ interface PurchaseModalProps {
   isOpen: boolean;
   initialQuantity?: number;
   onClose: () => void;
+  paymentMethod?: "online" | "cod";
 }
 
 export const PurchaseModal = ({
   isOpen,
   onClose,
   initialQuantity,
+  paymentMethod = "online",
 }: PurchaseModalProps) => {
+  const [successData, setSuccessData] = useState<null | {
+    sale: any;
+    customer: any;
+  }>(null);
   const [ubigeo, setUbigeo] = useState<UbigeoTree | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string>("");
   const [selectedProvince, setSelectedProvince] = useState<string>("");
@@ -154,6 +160,7 @@ export const PurchaseModal = ({
           quantity: data.quantity,
           unitPrice: Number(unitPrice.toFixed(2)), // manda el unitario con descuento si aplica
           totalAmount: Number(total.toFixed(2)), // total final aplicado
+          paymentMethod: paymentMethod,
           // Si tu backend lo acepta, puedes enviar estos campos extra:
           // discountPerUnit: Number(savingsPerUnit.toFixed(2)),
           // totalDiscount: Number(totalSavings.toFixed(2)),
@@ -161,7 +168,7 @@ export const PurchaseModal = ({
         },
       },
       {
-        onSuccess: ({ pref }) => {
+        onSuccess: ({ pref, sale, customer }) => {
           trackPixel("AddPaymentInfo", {
             value: total,
             currency: "PEN",
@@ -170,10 +177,48 @@ export const PurchaseModal = ({
             ],
             content_type: "product",
           });
-          window.location.href = pref.init_point;
+          const N8N_WEBHOOK = import.meta.env.VITE_N8N_WEBHOOK as
+            | string
+            | undefined;
+
+          if (paymentMethod === "online") {
+            // redirect to payment provider (MercadoPago)
+            window.location.href = pref.init_point;
+          } else {
+            // Pago contraentrega: enviar webhook a n8n y mostrar confirmación en modal
+            (async () => {
+              try {
+                if (N8N_WEBHOOK) {
+                  await fetch(N8N_WEBHOOK, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      event: "sale.created",
+                      paymentMethod: "cod",
+                      sale,
+                      customer,
+                    }),
+                  });
+                } else {
+                  console.warn(
+                    "VITE_N8N_WEBHOOK not set; skipping webhook POST"
+                  );
+                }
+              } catch (err) {
+                console.error("Failed sending n8n webhook", err);
+              } finally {
+                // Guardamos la venta y cliente para mostrar pantalla de éxito dentro del modal
+                setSuccessData({ sale, customer });
+              }
+            })();
+          }
         },
-        onError: (err: any) => {
-          alert(err.message || "Error al procesar la compra");
+        onError: (err: unknown) => {
+          const message =
+            typeof err === "object" && err !== null && "message" in err
+              ? (err as Error).message
+              : String(err);
+          alert(message || "Error al procesar la compra");
         },
       }
     );
@@ -224,387 +269,462 @@ export const PurchaseModal = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md mx-auto max-h-[90vh] overflow-y-auto bg-card border border-border rounded-ios shadow-float">
-        <DialogHeader className="text-center pb-4">
-          <button
-            onClick={onClose}
-            className="absolute right-4 top-4 p-1 rounded-full hover:bg-muted/50 transition-colors"
-          >
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
-          <DialogTitle className="text-2xl font-semibold text-foreground">
-            Completa tu compra
-          </DialogTitle>
-          <p className="text-sm text-muted-foreground mt-2">
-            Entregas en 24–72 h según distrito. Garantía local.
-          </p>
-        </DialogHeader>
+        {successData ? (
+          <div className="p-6 text-center">
+            <CheckCircle className="w-12 h-12 text-success mx-auto" />
+            <h2 className="text-2xl font-semibold mt-3">Pedido recibido</h2>
+            <p className="text-muted-foreground mt-2">
+              Gracias — tu pedido fue registrado. En breve te contactaremos para
+              coordinar la entrega.
+            </p>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <FormField
-                control={form.control}
-                name="firstName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-foreground">
-                      Nombre *
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Ariana"
-                        className="h-12 rounded-ios border-input focus:border-foreground"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="lastName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-foreground">
-                      Apellido *
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Gómez"
-                        className="h-12 rounded-ios border-input focus:border-foreground"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-foreground">
-                    Celular / WhatsApp *
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="tel"
-                      placeholder="987654321"
-                      className="h-12 rounded-ios border-input focus:border-foreground"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-foreground">
-                    Dirección *
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Av. Arequipa 123, depto. 402"
-                      className="h-12 rounded-ios border-input focus:border-foreground"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-1 gap-3">
-              <FormField
-                control={form.control}
-                name="region"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-foreground">
-                      Región *
-                    </FormLabel>
-                    <Select
-                      onValueChange={handleRegionChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-9 rounded-ios border-input focus:border-foreground">
-                          <SelectValue placeholder="Selecciona tu región" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="bg-background border border-border rounded-ios shadow-float">
-                        {availableRegions.map((region) => (
-                          <SelectItem
-                            key={region}
-                            value={region}
-                            className="rounded-ios"
-                          >
-                            {region}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-
-              {availableProvinces.length > 0 && (
-                <FormField
-                  control={form.control}
-                  name="province"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-foreground">
-                        Provincia *
-                      </FormLabel>
-                      <Select
-                        onValueChange={handleProvinceChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="h-12 rounded-ios border-input focus:border-foreground">
-                            <SelectValue placeholder="Selecciona tu provincia" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="bg-background border border-border rounded-ios shadow-float text-sm max-h-48 overflow-y-auto">
-                          {availableProvinces.map((province) => (
-                            <SelectItem
-                              key={province}
-                              value={province}
-                              className="text-sm py-1.5"
-                            >
-                              {province}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              {availableDistricts.length > 0 && (
-                <FormField
-                  control={form.control}
-                  name="district"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-foreground">
-                        Distrito *
-                      </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="h-12 rounded-ios border-input focus:border-foreground">
-                            <SelectValue placeholder="Selecciona tu distrito" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="bg-background border border-border rounded-ios shadow-float">
-                          {availableDistricts.map((district) => (
-                            <SelectItem
-                              key={district}
-                              value={district}
-                              className="rounded-ios"
-                            >
-                              {district}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-              )}
-            </div>
-
-            <FormField
-              control={form.control}
-              name="reference"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-foreground">
-                    Referencia
-                  </FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Frente al parque / Portón negro"
-                      className="min-h-[80px] rounded-ios border-input focus:border-foreground resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="quantity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-foreground">
-                    Cantidad *
-                  </FormLabel>
-                  <FormControl>
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => handleQuantityChange(false)}
-                        className="w-12 h-12 rounded-full border border-input bg-background hover:bg-muted/50 flex items-center justify-center transition-colors"
-                        disabled={qty <= 1}
-                      >
-                        <Minus className="w-4 h-4 text-foreground" />
-                      </button>
-                      <div className="flex-1 text-center">
-                        <Input
-                          type="number"
-                          min="1"
-                          max="5"
-                          className="h-12 text-center rounded-ios border-input focus:border-foreground"
-                          {...field}
-                          value={qty}
-                          onChange={(e) =>
-                            field.onChange(
-                              Math.max(
-                                1,
-                                Math.min(5, parseInt(e.target.value) || 1)
-                              )
-                            )
-                          }
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleQuantityChange(true)}
-                        className="w-12 h-12 rounded-full border border-input bg-background hover:bg-muted/50 flex items-center justify-center transition-colors"
-                        disabled={qty >= 5}
-                      >
-                        <Plus className="w-4 h-4 text-foreground" />
-                      </button>
-                    </div>
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-
-            {/* Resumen con descuento */}
-            <div className="bg-muted/30 rounded-ios p-4 space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">
-                  Precio unitario
-                </span>
-                <span className="text-sm font-medium">
-                  {qty >= 2 ? (
-                    <>
-                      <span className="line-through mr-2">
-                        S/ {BASE_PRICE.toFixed(2)}
-                      </span>
-                      <span className="text-success font-semibold">
-                        S/ {unitPrice.toFixed(2)}
-                      </span>
-                    </>
-                  ) : (
-                    <>S/ {unitPrice.toFixed(2)}</>
-                  )}
+            <div className="bg-muted/40 rounded p-4 text-left text-sm mt-4">
+              <div className="flex justify-between">
+                <span>ID de venta</span>
+                <span className="font-mono">
+                  {(successData.sale as any)?.id}
                 </span>
               </div>
-
-              {qty >= 2 && (
-                <>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      Ahorro por unidad
-                    </span>
-                    <span className="text-sm text-success">
-                      - S/ {savingsPerUnit.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      Subtotal (sin descuento)
-                    </span>
-                    <span className="text-sm line-through">
-                      S/ {subtotal.toFixed(2)}
-                    </span>
-                  </div>
-                </>
-              )}
-
-              <div className="flex justify-between items-center border-t border-border pt-2">
-                <span className="text-lg font-semibold text-foreground">
-                  Total
-                </span>
-                <span className="text-xl font-bold text-foreground">
-                  S/ {total.toFixed(2)}
+              <div className="flex justify-between mt-2">
+                <span>Nombre</span>
+                <span className="font-medium">
+                  {(successData.customer as any)?.name}
                 </span>
               </div>
+            </div>
 
-              {qty >= 2 && (
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">
-                    Ahorro total
-                  </span>
-                  <span className="text-xs text-success">
-                    - S/ {totalSavings.toFixed(2)}
-                  </span>
+            <div className="flex gap-3 justify-center mt-4">
+              <a
+                href={`https://wa.me/51932567344?text=Hola,%20tengo%20una%20consulta%20sobre%20mi%20pedido%20${encodeURIComponent(
+                  String((successData.sale as any)?.id ?? "")
+                )}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2"
+              >
+                <Button variant="outline" className="gap-2">
+                  <MessageCircle className="w-4 h-4" />
+                  Contactarme por WhatsApp
+                </Button>
+              </a>
+
+              <Button
+                onClick={() => {
+                  setSuccessData(null);
+                  onClose();
+                }}
+              >
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <DialogHeader className="text-center pb-4">
+              <button
+                onClick={onClose}
+                className="absolute right-4 top-4 p-1 rounded-full hover:bg-muted/50 transition-colors"
+              >
+                <X className="w-5 h-5 text-muted-foreground" />
+              </button>
+              <DialogTitle className="text-2xl font-semibold text-foreground">
+                {paymentMethod === "cod"
+                  ? "Completa tu compra contraentrega"
+                  : "Completa tu compra"}
+              </DialogTitle>
+              {paymentMethod === "cod" && (
+                <div className="mt-2">
+                  <p className="text-xs text-destructive mt-2">
+                    Completa sus datos solo si está completamente seguro de
+                    realizar la compra.
+                  </p>
                 </div>
               )}
-            </div>
+              {paymentMethod !== "cod" && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Entregas en 12–48 h según distrito. Garantía local.
+                </p>
+              )}
+            </DialogHeader>
 
-            <div className="space-y-3 pt-2">
-              <Button
-                type="submit"
-                variant="default"
-                size="lg"
-                className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 rounded-full font-medium"
-                disabled={purchase.isPending} // <-- quita form.formState.isValid
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-4"
               >
-                {purchase.isPending ? "Procesando…" : "Pagar ahora"}
-              </Button>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-foreground">
+                          Nombre *
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Ariana"
+                            className="h-12 rounded-ios border-input focus:border-foreground"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-foreground">
+                          Apellido *
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Gómez"
+                            className="h-12 rounded-ios border-input focus:border-foreground"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="w-full h-12 rounded-full font-medium"
-                onClick={() => {
-                  const message = encodeURIComponent(
-                    `Hola, tengo algunas dudas sobre el cargador Type-C a Lightning. ¿Podrían ayudarme?`
-                  );
-                  window.open(
-                    `https://wa.me/51932567344?text=${message}`,
-                    "_blank"
-                  );
-                }}
-                disabled={purchase.isPending}
-              >
-                Tengo dudas
-              </Button>
-            </div>
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-foreground">
+                        Celular / WhatsApp *
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="tel"
+                          placeholder="987654321"
+                          className="h-12 rounded-ios border-input focus:border-foreground"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-foreground">
+                        Dirección *
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Av. Arequipa 123, depto. 402"
+                          className="h-12 rounded-ios border-input focus:border-foreground"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="flex items-center justify-center gap-2 pt-2">
-              <Lock className="w-4 h-4 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground text-center">
-                Pago 100% seguro. Tus datos solo se usan para coordinar la
-                entrega.
-              </p>
-            </div>
-          </form>
-        </Form>
+                <div className="grid grid-cols-1 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="region"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-foreground">
+                          Región *
+                        </FormLabel>
+                        <Select
+                          onValueChange={handleRegionChange}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="h-9 rounded-ios border-input focus:border-foreground">
+                              <SelectValue placeholder="Selecciona tu región" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="bg-background border border-border rounded-ios shadow-float">
+                            {availableRegions.map((region) => (
+                              <SelectItem
+                                key={region}
+                                value={region}
+                                className="rounded-ios"
+                              >
+                                {region}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
+
+                  {availableProvinces.length > 0 && (
+                    <FormField
+                      control={form.control}
+                      name="province"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium text-foreground">
+                            Provincia *
+                          </FormLabel>
+                          <Select
+                            onValueChange={handleProvinceChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="h-12 rounded-ios border-input focus:border-foreground">
+                                <SelectValue placeholder="Selecciona tu provincia" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-background border border-border rounded-ios shadow-float text-sm max-h-48 overflow-y-auto">
+                              {availableProvinces.map((province) => (
+                                <SelectItem
+                                  key={province}
+                                  value={province}
+                                  className="text-sm py-1.5"
+                                >
+                                  {province}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-xs" />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {availableDistricts.length > 0 && (
+                    <FormField
+                      control={form.control}
+                      name="district"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium text-foreground">
+                            Distrito *
+                          </FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="h-12 rounded-ios border-input focus:border-foreground">
+                                <SelectValue placeholder="Selecciona tu distrito" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-background border border-border rounded-ios shadow-float">
+                              {availableDistricts.map((district) => (
+                                <SelectItem
+                                  key={district}
+                                  value={district}
+                                  className="rounded-ios"
+                                >
+                                  {district}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-xs" />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="reference"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-foreground">
+                        Referencia
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Frente al parque / Portón negro"
+                          className="min-h-[80px] rounded-ios border-input focus:border-foreground resize-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-foreground">
+                        Cantidad *
+                      </FormLabel>
+                      <FormControl>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleQuantityChange(false)}
+                            className="w-12 h-12 rounded-full border border-input bg-background hover:bg-muted/50 flex items-center justify-center transition-colors"
+                            disabled={qty <= 1}
+                          >
+                            <Minus className="w-4 h-4 text-foreground" />
+                          </button>
+                          <div className="flex-1 text-center">
+                            <Input
+                              type="number"
+                              min="1"
+                              max="5"
+                              className="h-12 text-center rounded-ios border-input focus:border-foreground"
+                              {...field}
+                              value={qty}
+                              onChange={(e) =>
+                                field.onChange(
+                                  Math.max(
+                                    1,
+                                    Math.min(5, parseInt(e.target.value) || 1)
+                                  )
+                                )
+                              }
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleQuantityChange(true)}
+                            className="w-12 h-12 rounded-full border border-input bg-background hover:bg-muted/50 flex items-center justify-center transition-colors"
+                            disabled={qty >= 5}
+                          >
+                            <Plus className="w-4 h-4 text-foreground" />
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Resumen con descuento */}
+                <div className="bg-muted/30 rounded-ios p-4 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">
+                      Precio unitario
+                    </span>
+                    <span className="text-sm font-medium">
+                      {qty >= 2 ? (
+                        <>
+                          <span className="line-through mr-2">
+                            S/ {BASE_PRICE.toFixed(2)}
+                          </span>
+                          <span className="text-success font-semibold">
+                            S/ {unitPrice.toFixed(2)}
+                          </span>
+                        </>
+                      ) : (
+                        <>S/ {unitPrice.toFixed(2)}</>
+                      )}
+                    </span>
+                  </div>
+
+                  {qty >= 2 && (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">
+                          Ahorro por unidad
+                        </span>
+                        <span className="text-sm text-success">
+                          - S/ {savingsPerUnit.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">
+                          Subtotal (sin descuento)
+                        </span>
+                        <span className="text-sm line-through">
+                          S/ {subtotal.toFixed(2)}
+                        </span>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="flex justify-between items-center border-t border-border pt-2">
+                    <span className="text-lg font-semibold text-foreground">
+                      Total
+                    </span>
+                    <span className="text-xl font-bold text-foreground">
+                      S/ {total.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {qty >= 2 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-muted-foreground">
+                        Ahorro total
+                      </span>
+                      <span className="text-xs text-success">
+                        - S/ {totalSavings.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  <Button
+                    type="submit"
+                    variant="default"
+                    size="lg"
+                    className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 rounded-full font-medium"
+                    disabled={purchase.isPending} // <-- quita form.formState.isValid
+                  >
+                    {purchase.isPending ? "Procesando…" : "Pagar ahora"}
+                  </Button>
+
+                  {paymentMethod === "cod" && (
+                    <p className="text-xs text-destructive mt-2">
+                      Para envíos contraentrega a provincia: adelanto de S/ 10
+                      para recojos por Olva o Shalom.
+                    </p>
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="w-full h-12 rounded-full font-medium"
+                    onClick={() => {
+                      const message = encodeURIComponent(
+                        `Hola, tengo algunas dudas sobre el cargador Type-C a Lightning. ¿Podrían ayudarme?`
+                      );
+                      window.open(
+                        `https://wa.me/51932567344?text=${message}`,
+                        "_blank"
+                      );
+                    }}
+                    disabled={purchase.isPending}
+                  >
+                    Tengo dudas
+                  </Button>
+                </div>
+
+                <div className="flex items-center justify-center gap-2 pt-2">
+                  <Lock className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground text-center">
+                    Pago 100% seguro. Tus datos solo se usan para coordinar la
+                    entrega.
+                  </p>
+                </div>
+              </form>
+            </Form>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

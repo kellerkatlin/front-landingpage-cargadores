@@ -36,19 +36,23 @@ export function usePurchase() {
   return useMutation({
     mutationFn: async (data: {
       customer: any;
-      sale: { quantity: number; unitPrice: number; totalAmount: number };
+      sale: any; // allow extra fields like paymentMethod
     }) => {
       // 1) Crear cliente
       const customer = await createCustomer(data.customer);
 
       // 2) Crear venta
-      const sale = await createSale({
+      const salePayload: any = {
         customerId: customer.id,
         quantity: data.sale.quantity,
         unitPrice: data.sale.unitPrice,
         subtotal: data.sale.quantity * data.sale.unitPrice,
         totalAmount: data.sale.totalAmount,
-      });
+      };
+      // forward any extra sale fields (e.g., paymentMethod)
+      Object.assign(salePayload, data.sale);
+
+      const sale = await createSale(salePayload);
 
       // 3) Crear preferencia
       const pref = await createPreference(sale.id);

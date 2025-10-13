@@ -88,6 +88,35 @@ export default function CheckoutSuccess() {
     sessionStorage.setItem(alreadyFiredKey, "1");
   }, [saleId, data]);
 
+  // -----> DISPARO DE WEBHOOK A N8N (cuando el pago está PAID)
+  useEffect(() => {
+    if (!saleId || !data) return;
+    const paid = data?.paymentStatus === "PAID";
+    if (!paid) return;
+
+    const webhookKey = `n8n_webhook_fired_${saleId}`;
+    if (sessionStorage.getItem(webhookKey)) return; // evita duplicados
+
+    const N8N_WEBHOOK = import.meta.env.VITE_N8N_WEBHOOK as string | undefined;
+    if (!N8N_WEBHOOK) {
+      console.warn("VITE_N8N_WEBHOOK not set; skipping n8n webhook");
+      return;
+    }
+
+    (async () => {
+      try {
+        await fetch(N8N_WEBHOOK, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ event: "sale.paid", sale: data }),
+        });
+        sessionStorage.setItem(webhookKey, "1");
+      } catch (err) {
+        console.error("Failed to send n8n webhook", err);
+      }
+    })();
+  }, [saleId, data]);
+
   // -----------------------------------------
 
   if (!saleId) {
