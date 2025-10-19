@@ -32,8 +32,8 @@ import { trackPixel, track } from "@/lib/pixel";
 import rawUbigeo from "@/data/ubigeo.json";
 
 const PRODUCT_ID = "charger_typec_lightning";
-const BASE_PRICE = 49;
-const TIER_PRICE_2PLUS = 39;
+const BASE_PRICE = 49.9;
+const TIER_PRICE_2PLUS = 39.9;
 
 type DistrictInfo = { ubigeo: string; id: number; inei?: string };
 type UbigeoTree = Record<string, Record<string, Record<string, DistrictInfo>>>;

@@ -89,7 +89,7 @@ export const PricingSection = () => {
                   S/ 89.90
                 </span>
                 <span className="text-5xl md:text-6xl font-bold text-price-highlight">
-                  S/ 49
+                  S/ 49.90
                 </span>
               </div>
               <p className="text-muted-foreground">
