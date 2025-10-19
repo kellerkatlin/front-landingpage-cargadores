@@ -23,8 +23,8 @@ import { track } from "@/lib/pixel";
 
 // Replaced TabsBlock with a shadcn Accordion rendered below the pay buttons.
 
-const BASE_PRICE = 49;
-const TIER_PRICE_2PLUS = 39;
+const BASE_PRICE = 49.9;
+const TIER_PRICE_2PLUS = 39.9;
 const OFFERPRICE = 120;
 
 const PRODUCT_ID = "charger_typec_lightning"; // reemplaza si corresponde
