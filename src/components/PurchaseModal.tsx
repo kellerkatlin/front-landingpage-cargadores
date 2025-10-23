@@ -224,11 +224,26 @@ export const PurchaseModal = ({
                     },
                     { eventID: `sale_${sale.id}` }
                   );
+
+                  // ✅ Disparar Pixel TikTok (Purchase)
+                  if (typeof window !== "undefined" && window.ttq) {
+                    window.ttq.track("Purchase", {
+                      value: Number(total.toFixed(2)),
+                      currency: "PEN",
+                      contents: [
+                        {
+                          id: PRODUCT_ID,
+                          quantity: form.getValues("quantity"),
+                        },
+                      ],
+                      content_type: "product",
+                    });
+                  }
                 } catch (err) {
-                  console.warn("Failed to fire Purchase pixel", err);
+                  console.warn("Failed to fire Purchase pixels", err);
                 }
 
-                // Guardamos la venta y cliente para mostrar pantalla de éxito dentro del modal
+                // Guardar datos de éxito en estado (mostrar mensaje final)
                 setSuccessData({ sale, customer });
               }
             })();
