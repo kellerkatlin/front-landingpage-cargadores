@@ -14,8 +14,13 @@ import SalesPage from "./page/admin/Sales";
 import CheckoutSuccess from "./page/checkout/Success";
 import CheckoutFailure from "./page/checkout/Failure";
 import CheckoutPending from "./page/checkout/Pending";
+import { useEffect } from "react";
+import { initTikTokPixel } from "./lib/tiktokPixel";
 function App() {
   const queryClient = new QueryClient();
+  useEffect(() => {
+    initTikTokPixel();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
