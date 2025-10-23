@@ -232,8 +232,9 @@ export const PurchaseModal = ({
                       currency: "PEN",
                       contents: [
                         {
-                          id: PRODUCT_ID,
+                          content_id: PRODUCT_ID, // ✅ explícito
                           quantity: form.getValues("quantity"),
+                          price: Number(unitPrice.toFixed(2)),
                         },
                       ],
                       content_type: "product",
