@@ -27,7 +27,7 @@ const messages: Message[] = [
   {
     id: "entrega-rapida",
     icon: "⚡",
-    text: "Entrega rápida en 24-48 horas",
+    text: "Entrega rápida en 12-36 horas",
   },
   {
     id: "envio-seguro",

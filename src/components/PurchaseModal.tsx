@@ -371,7 +371,7 @@ export const PurchaseModal = ({
               </DialogTitle>
               {paymentMethod === "cod" && (
                 <div className="mt-2">
-                  <p className="text-xs text-destructive mt-2">
+                  <p className="text-xs text-destructive font-semibold mt-2">
                     Completa sus datos solo si está completamente seguro de
                     realizar la compra.
                   </p>
@@ -725,7 +725,7 @@ export const PurchaseModal = ({
                   </Button>
 
                   {paymentMethod === "cod" && (
-                    <p className="text-xs text-destructive mt-2">
+                    <p className="text-xs font-semibold text-destructive mt-2">
                       Para envíos contraentrega a provincia: adelanto de S/ 10
                       para recojos por Olva o Shalom.
                     </p>

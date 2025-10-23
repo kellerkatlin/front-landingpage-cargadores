@@ -190,7 +190,7 @@ export const HeroSection = () => {
                 </li>
                 <li className="flex items-center justify-center lg:justify-start gap-2 bg-card rounded-ios px-3 py-2 border border-border shadow-card">
                   <Shield className="w-4 h-4 text-primary" />
-                  Garantía 6 meses
+                  Garantía 3 meses
                 </li>
               </motion.ul>
 
@@ -370,40 +370,68 @@ export const HeroSection = () => {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground mt-3 text-center lg:text-left">
-                    Pago seguro • Envío en 12–72 horas
+                    Pago seguro • Envío en 12–36 horas
                   </p>
                 </div>
               </motion.div>
               {/* Acordeón informativo (Envío / Resto de Provincias) */}
               <div className="mt-4">
                 <Accordion type="single" collapsible defaultValue="">
-                  <AccordionItem value="envio">
+                  <AccordionItem value="lima">
                     <AccordionTrigger className="hover:no-underline">
-                      Envío GRATIS y pagas AL RECIBIR en Lima y Callao
+                      Lima y Callao - Envío GRATIS • Contraentrega
                     </AccordionTrigger>
                     <AccordionContent>
                       <div className="text-sm text-left -mt-2">
                         <p className="text-muted-foreground mt-2">
-                          Realizamos envíos gratis a todo Perú. Nuestra oficina
-                          se encuentra en Lima.
+                          Pagas al recibir el producto en tu domicilio.
                         </p>
                         <div className="mt-3">
                           <h4 className="text-sm font-medium">
-                            Lima Metropolitana y Callao:
+                            Tiempo de Entrega:
                           </h4>
                           <p className="text-sm text-muted-foreground">
-                            Pagas al recibir el producto en tu domicilio. Tiempo
-                            de Entrega: 24hs hábiles (NextDay)
+                            24hs hábiles (Siguiente Día)
+                          </p>
+                        </div>
+                        <div className="mt-3">
+                          <p className="text-sm text-muted-foreground">
+                            ✓ Envío completamente GRATIS
+                            <br />
+                            ✓ Pago contra entrega en tu domicilio
+                            <br />✓ Sin adelanto requerido
+                          </p>
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="provincias">
+                    <AccordionTrigger className="hover:no-underline">
+                      Provincias / Resto del Perú - Contraentrega
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="text-sm text-left -mt-2">
+                        <p className="text-muted-foreground mt-2">
+                          Realizamos envíos a todo el Perú a través de agencias
+                          como Olva o Shalom.
+                        </p>
+                        <div className="mt-3">
+                          <h4 className="text-sm font-medium">
+                            Tiempo de Entrega:
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            Entre 12-36hrs hábiles
                           </p>
                         </div>
                         <div className="mt-3">
                           <h4 className="text-sm font-medium">
-                            Resto de Provincias:
+                            Modalidad de Pago:
                           </h4>
                           <p className="text-sm text-muted-foreground">
-                            Contra Entrega: Previo adelanto del S/.15 y al
-                            llegar a la Agencia en destino se completa el resto
-                            del pago. Tiempo de Entrega: Entre 48-72hs hábiles.
+                            Contra Entrega con previo adelanto de S/.10. Al
+                            llegar a la agencia en destino se completa el resto
+                            del pago.
                           </p>
                         </div>
                       </div>

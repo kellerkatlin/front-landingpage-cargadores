@@ -108,7 +108,7 @@ export const PricingSection = () => {
               {[
                 "Carga rápida certificada",
                 "Compatible todos los iPhone",
-                "Garantía 6 meses",
+                "Garantía 3 meses",
                 "Envío gratis",
               ].map((text, i) => (
                 <motion.div
@@ -162,7 +162,7 @@ export const PricingSection = () => {
                 Lo quiero - Comprar ahora
               </Button>
               <p className="text-xs text-muted-foreground mt-4">
-                Pago seguro • Envío en 24-48 horas
+                Pago seguro • Envío en 12-36 horas
               </p>
             </motion.div>
           </motion.div>
