@@ -48,7 +48,8 @@ const formSchema = z.object({
   address: z.string().min(5, "Ingresa una dirección completa"),
   region: z.string().min(1, "Selecciona una región"),
   province: z.string().min(1, "Selecciona una provincia"),
-  district: z.string(),
+  // district is conditionally required: we validate manually on submit when districts are available
+  district: z.string().optional(),
   reference: z.string().optional(),
   quantity: z.number().min(1),
 });
@@ -135,6 +136,14 @@ export const PurchaseModal = ({
   const purchase = usePurchase();
 
   const onSubmit = (data: FormData) => {
+    // Si hay distritos disponibles para la provincia seleccionada, el distrito es obligatorio
+    if (availableDistricts.length > 0 && !data.district) {
+      form.setError("district", {
+        type: "required",
+        message: "Selecciona un distrito",
+      });
+      return;
+    }
     // Pixel: valor real con descuento
     trackPixel("InitiateCheckout", {
       value: total,
