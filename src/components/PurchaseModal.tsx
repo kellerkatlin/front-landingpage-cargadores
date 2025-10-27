@@ -730,7 +730,7 @@ export const PurchaseModal = ({
                     className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 rounded-full font-medium"
                     disabled={purchase.isPending}
                   >
-                    {purchase.isPending ? "Procesando…" : "Pagar ahora"}
+                    {purchase.isPending ? "Procesando…" : "Realizar pedido"}
                   </Button>
 
                   {paymentMethod === "cod" && (
